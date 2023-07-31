@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod                     # You are describing a pod
+metadata:
+  name: kubia-manual          # The name of the pod
+spec:
+  containers:
+  - image: luksa/kubia
+    name: kubia               # The name of the container
+    ports:
+    - containerPort: 8080     # The port the app is listening on
+      protocol: TCP
+
+# Specifying ports in the pod definition is purely informational. 
+# Omitting them has no effect on whether clients can connect to the pod through the port or not.
+# But it makes sense to define the ports explicitly so that everyone using your cluster can quickly see what ports each pod exposes.
