@@ -1,0 +1,23 @@
+apiVersion: apps/v1          # ReplicaSets belong to the apps API group and version v1beta2.
+kind: ReplicaSet
+metadata:
+  name: kubia
+spec:
+  replicas: 3
+  selector:
+    matchLabels:             # You are using the simpler matchLabels selector here, which is much like a ReplicationController's selector.
+      app: kubia
+  template:                  # The template is the same as in the ReplicationController.
+    metadata:
+      labels:
+        app: kubia
+    spec:
+      containers:
+      - name: kubia
+        image: skyliu01/kubia
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
