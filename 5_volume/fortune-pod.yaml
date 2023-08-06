@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fortune
+spec:
+  containers:
+  - image: luksa/fortune
+    name: html-generator
+    volumeMounts:
+    - name: html   # The html volume is mounted at /var/htdocs in the container.
+      mountPath: /var/htdocs
+  - image: nginx:alpine
+    name: web-server
+    volumeMounts:
+    - name: html   # The html volume is mounted at /usr/share/nginx/html as read-only.
+      mountPath: /usr/share/nginx/html # this is the default directory Nginx serves files from
+      readOnly: true
+    ports:
+    - containerPort: 80
+      protocol: TCP
+  volumes:
+  - name: html     # A single emptyDir volume called html
+    emptyDir: {}
