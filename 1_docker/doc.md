@@ -191,3 +191,41 @@ The best thing about this is that your application will have the exact same envi
 If it ran fine on your machine, it should run as well on every other Linux machine.
 
 No need to worry about whether the host machine has Node.js installed or not.
+
+
+
+# Defining the command and arguments in Docker
+
+1. ENTRYPOINT defines the executable invoked when the container is started.
+2. CMD specifies the arguments that get passed to the ENTRYPOINT.
+
+Although you can use the CMD instruction to specify the command you want to execute when the image is run, the correct way is to do it through the ENTRYPOINT instruction and to only specify the CMD if you want to define the **default** arguments.
+
+CMD不是必须的，它的作用是提供**默认参数**。
+
+如果在Run一个image的时候也提供了参数，那么在启动container时提供的参数将覆盖掉Dockerfile中CMD提供的默认参数：
+
+```shell
+docker run <image> <arguments>  # <arguments>将覆盖掉Dockerfile中CMD提供的默认参数
+```
+
+#### UNDERSTANDING THE DIFFERENCE BETWEEN THE SHELL AND EXEC FORMS
+
+1. shell form—For example, ENTRYPOINT node app.js.
+2. exec form—For example, ENTRYPOINT ["node", "app.js"].
+
+**应该始终使用第二种方式！！！！！**This runs the node process directly (not inside a shell).
+
+当使用 exec ENTRYPOINT 模式时，应用进程在容器中是1号进程：
+
+![image-20230808071735019](.\image-20230808071735019.png)
+
+下面换成shell ENTRYPOINT模式：
+
+```shell
+ENTRYPOINT node app.js
+```
+
+![image-20230808072607467](.\image-20230808072607467.png)
+
+Shell模式相比于Exec模式多了一个 /bin/sh进程，**一定要使用Exec模式，不要使用shell模式！！！！！！**
