@@ -229,3 +229,39 @@ ENTRYPOINT node app.js
 ![image-20230808072607467](.\image-20230808072607467.png)
 
 Shell模式相比于Exec模式多了一个 /bin/sh进程，**一定要使用Exec模式，不要使用shell模式！！！！！！**
+
+#### 通过CMD传递参数的例子
+
+```shell
+#!/bin/bash
+
+INTERVAL=$1 # cmd args
+echo loop once every $INTERVAL seconds
+
+while :
+do
+  echo loop
+  sleep $INTERVAL
+done
+```
+
+```dockerfile
+FROM ubuntu:latest
+
+ADD loop.sh /bin/loop.sh
+
+ENTRYPOINT ["/bin/loop.sh"]
+CMD ["10"] # default cmd args
+```
+
+```shell
+docker run loop-args
+```
+
+![image-20230808080912034](.\image-20230808080912034.png)
+
+```shell
+docker run loop-args 5
+```
+
+![image-20230808081259358](.\image-20230808081259358.png)
