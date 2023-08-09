@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: loop-env
+spec:
+  containers:
+  - image: skyliu01/loop-env
+    name: loop
+    env:                  # set environment variable
+    - name: INTERVAL
+      value: "30"

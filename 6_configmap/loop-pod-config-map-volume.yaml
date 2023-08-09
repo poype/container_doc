@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: loop-args-config-map
+spec:
+  containers:
+  - image: skyliu01/loop-args
+    name: loop-args
+    env:
+    - name: INTERVAL
+      valueFrom:
+        configMapKeyRef:
+          name: loop-config
+          key: sleep-interval
+    args: ["$(INTERVAL)"] 
+    volumeMounts:
+    - name: config
+      mountPath: /root      # You're mounting the configMap volume at this location.
+  volumes:
+  - name: config
+    configMap:              
+      name: file-config     # The volume refers to your file-config ConfigMap.

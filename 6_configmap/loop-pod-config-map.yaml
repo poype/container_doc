@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: loop-config-map
+spec:
+  containers:
+  - image: skyliu01/loop-env
+    name: loop
+    env:                  
+    - name: INTERVAL            # Setting the environment variable called INTERVAL
+      valueFrom:
+        configMapKeyRef:        # Instead of setting a fixed value, you're initializing it from a ConfigMap key
+          name: loop-config     # The name of the ConfigMap
+          key: sleep-interval   # You're setting the variable to whatever is stored under this key.

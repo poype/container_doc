@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: loop
+spec:
+  containers:
+  - image: skyliu01/loop-args
+    args: ["5"]   # override default args with 5
+    name: loop-args
