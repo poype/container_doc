@@ -1,0 +1,45 @@
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: downward
+spec:
+  containers:
+  - name: main
+    image: skyliu01/loop-args
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name              # referencing the metadata.name field from the pod manifest
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: SERVICE_ACCOUNT
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.serviceAccountName
+    - name: CONTAINER_CPU_REQUEST_MILLICORES
+      valueFrom:
+        resourceFieldRef:                       # using resourceFieldRef instead of fieldRef.
+          resource: requests.cpu
+          divisor: 1m                           # For resource fields, you define a divisor to get the value in the unit you need.
+    - name: CONTAINER_MEMORY_LIMIT_KIBIBYTES    # default memory limit is 3923764
+      valueFrom:
+        resourceFieldRef:
+          resource: limits.memory
+          divisor: 1Ki
+```
+
+把 Node、Pod、Container 相关的一些 metadata 通过环境变量传递给应用进程：
+
+![image-20230812153750647](.\image\image-20230812153750647.png)
