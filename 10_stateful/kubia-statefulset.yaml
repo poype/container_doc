@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kubia
+spec:
+  serviceName: kubia
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kubia  # has to match spec.template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: kubia  # Pods created by the StatefulSet will have the app=kubia label.
+    spec:
+      containers:
+      - name: kubia
+        image: skyliu01/pet
+        ports:
+        - name: http
+          containerPort: 8080
+  #       volumeMounts:
+  #       - name: data
+  #         mountPath: /var/data
+  # volumeClaimTemplates:   # The PersistentVolumeClaims will be created from this template.
+  # - metadata:
+  #     name: data
+  #   spec:
+  #     resources:
+  #       requests:
+  #         storage: 1Mi
+  #     accessModes:
+  #     - ReadWriteOnce
