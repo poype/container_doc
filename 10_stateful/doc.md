@@ -80,6 +80,8 @@ Kubernetes must take great care to ensure two stateful pod instances are never r
 
 before deploying a StatefulSet, you first need to create a headless Service, which will be used to provide the **network identity** for your stateful pods.
 
+You’re setting the clusterIP field to None, which makes this a headless Service.
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -117,6 +119,32 @@ kubia-2.kubia.default.svc.cluster.local
 可以看出Pod的域名就是在Service的域名前加上Pod的名字。由于StatefulSet中Pod的名字是稳定不变的，所有每个Pod就有一个稳定的网络域名。
 
 由于创建这个Service的目的是为了给StatefulSet中的每个Pod提供一个稳定的网络标识，并不是用来做Porxy，所以将它的clusterIP设置为None。
+
+#### 下面是关于headless service的补充：
+
+Unlike regular pods, stateful pods sometimes need to be addressable by their hostname, whereas stateless pods usually don’t. After all, each stateless pod is like any other. When you need one, you pick any one of them. But with stateful pods, you usually want to operate on a specific pod from the group, because they differ from each other (they hold different state, for example).
+
+For this reason, a StatefulSet requires you to create a corresponding governing headless Service that’s used to provide the actual network identity to each pod. Through this Service, each pod gets its own DNS entry, so its peers and possibly other clients in the cluster can address the pod by its hostname.
+
+For example, if the governing Service belongs to the default namespace and is called foo, and one of the pods is called A-0, you can reach the pod through its fully qualified domain name, which is `a-0.foo.default.svc.cluster.local`.
+
+Additionally, you can also use DNS to look up all the StatefulSet’s pods’ names by looking up SRV records for the `foo.default.svc.cluster.local` domain.
+
+Usually, when you perform a DNS lookup for a service, the DNS server returns a single IP—the service’s cluster IP. 
+
+But if you tell Kubernetes you don’t need a cluster IP for your service (**you do this by setting the clusterIP field to None in the service specification**), the DNS server will return the pod IPs instead of the single service IP. Instead of returning a single DNS `A` record, the DNS server will return multiple `A` records for the service, each pointing to the IP of an individual pod backing the service at that moment. Clients can therefore do a simple DNS `A` record lookup and get the IPs of all the pods that are part of the service. The client can then use that information to connect to one, many, or all of them.
+
+##### 什么是 DNS A记录？
+
+“A”代表“地址”，这是最基础的 DNS 记录类型：它表示给定域的 IP 地址。A 记录最常见的用途是 IP 地址查找
+
+下面是一个 A 记录示例：
+
+| example.com | record type: | value:    | TTL   |
+| ----------- | ------------ | --------- | ----- |
+| @           | A            | 192.0.2.1 | 14400 |
+
+
 
 #### CREATING THE STATEFULSET MANIFEST
 
