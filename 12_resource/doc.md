@@ -166,6 +166,8 @@ Kubernetes does this by categorizing pods into three Quality of Service (QoS) cl
    **a.** Requests and limits need to be set for both CPU and memory.
    **b.** They need to be set for **each** container.
    **c.** They need to be equal (the limit needs to match the request for each resource in each container).
+   Because a container’s resource requests, if not set explicitly, default to the limits, specifying the limits for all resources (for each container in the pod)
+   is enough for the pod to be Guaranteed.
 3. **Burstable**
    In between BestEffort and Guaranteed is the Burstable QoS class. All other pods fall into this class.
 
