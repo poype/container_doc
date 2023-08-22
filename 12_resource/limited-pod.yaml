@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: limited-pod
+spec:
+  containers:
+  - image: busybox
+    command: ["dd", "if=/dev/zero", "of=/dev/null"]
+    name: main
+    resources:
+      limits:
+        cpu: 300m         # This container will be allowed to use at most 1 CPU core.
+        memory: 20Mi   # The container will be allowed to use up to 20 mebibytes of memory.
