@@ -75,3 +75,15 @@ Alerting rules are another form of recording rules. They also evaluate PromQL ex
 Prometheus is designed for operational monitoring, where small inaccuracies due to factors like failed scrapes are a fact of life.
 
 Prometheus只提供99.9%正确的数据。因此，在涉及金钱或账单的应用程序中，应该谨慎使用Prometheus。
+
+### 容器化对监控的意义
+
+容器使用namespace做隔离，使用cgroup做资源管控，用这种轻量级的方法模拟一个主机实例。
+
+有了cgroup技术，所有应用的资源管控都是通过cgroup去管理的，那么监控本质上就可以标准化了。
+
+因为cgroup里面除了你的控制参数(比如说一个应用能用多少CPU，能用多少内存)，它还有真实的资源用量(cgroup知道你用了多少CPU和多少内存)。所以我们可以通过读取cgroup的这些文件，就能知道这些应用它用了多少资源。
+
+所以Kubernetes是怎么做的？Kubernetes利用一个叫CAdvisor的组件(新版本kubernetes开始自己实现这个组件了)，Kubernetes通过CAdvisor读取这些cgroup文件，然后去把这些真实的资源用量汇总起来，最后上报到监控系统。
+
+所以在容器化时代，kubernetes自动就帮我们拉取了很多监控数据，不需要依赖额外的agent从application中获取监控数据了。当然这是通用能力，如果你有一些特定的一些监控的metric要上报的话，你还是需要额外去获取那些metric数据。
