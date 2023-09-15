@@ -151,3 +151,132 @@ sum without(app,latency)(gauge_metric)
 
 42326 = 9854 + 10770 + 11064 + 10638
 
+# Counter
+
+Counters track the total number of some event since application started.  But the total is of little use to you on its own, **what you really want to know is how quickly the counter is increasing over time**.
+
+```java
+public void run() {
+    // 定义一个counter类型的metric
+    Counter requestCounter = Counter.build()
+                                    .name("counter_metric")
+                                    .labelNames("path", "method", "code")
+                                    .help("study prometheus counter metric")
+                                    .register();
+
+    long total = 0;
+
+    while(true) {
+        try {
+            // 延迟3秒
+            TimeUnit.MILLISECONDS.sleep(3000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        // 加1
+        requestCounter.labels("/aaa", "GET", "200").inc();
+        // 打印counter的值
+        System.out.println(++total);
+    }
+}
+```
+
+虽然代码中指定metric的名字是counter_metric，但metric的真实名字是counter_metric_total，会自动加一个total后缀。
+
+对于Counter类型的metric，application会吐出下面格式的value：
+
+```java
+// counter类型暴露的值
+counter_metric_total{path="/aaa",method="GET",code="200",} 480.0
+
+// gauge类型暴露的值
+gauge_metric{app="pay",path="/get",latency="99",} 49.0
+```
+
+看上去Counter类型吐出的值的形式与Gauge类型相同，但Counter与Gauge类型最大的区别是，Prometheus Server不仅会存储Counter类型metric当前采集到的值，而且还会存储这个metric在历史上采集到的所有的值。
+
+![image-20230913070722353](.\image\image-20230913070722353.png)
+
+Counter就像是一条递增的曲线，Prometheus会周期性的在一些时间点上采集曲线上的值。但由于Prometheus是每隔一段时间采集一次metric的值，无法采集到这条曲线上的所有值，所以**Prometheus并不能100%完全准确的绘制出counter metric的曲线**。
+
+例如，Prometheus每个10秒拉取一次数据，application每隔3秒就会给counter metric加1，所以上图中的曲线并不是纯直线，是一个梯度一个梯度递增的。每一个梯度横跨10秒，两个相邻的梯度之间相差3或4个高度。
+
+### rate函数
+
+rate函数的功能是按照设置的一个时间段，取 counter 这个时间段中的平均每秒的增量。
+
+下面代码生成counter metric的值：
+
+```java
+long total = 0;
+while(true) {
+    try {
+        // 每隔1秒执行一次加counter的操作
+        TimeUnit.MILLISECONDS.sleep(1000);
+    } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+    }
+
+    if (total < 300) {
+        // 第一个5分钟每次加1
+        requestCounter.labels("/aaa", "GET", "200").inc();
+    } else if (total < 600) {
+        // 第二个5分钟每次加2
+        requestCounter.labels("/aaa", "GET", "200").inc(2);
+    } else if (total < 900) {
+        // 第三个5分钟每次加4
+        requestCounter.labels("/aaa", "GET", "200").inc(4);
+    } else if (total < 1200) {
+        // 第四个5分钟每次加8
+        requestCounter.labels("/aaa", "GET", "200").inc(8);
+    } else {
+        // 第五个5分钟每次加16
+        requestCounter.labels("/aaa", "GET", "200").inc(16);
+    }
+}
+```
+
+rate(1m) 这样的取值方法 比起 rate(5m)，因为它取的时间短，所以任何某一瞬间的突起或者降低会在成图得时候体现的更加细致、敏感。
+而 rate(5m) 会把整个5分钟内的都一起平均了，当发生瞬间凸起得时候，会显得图平缓了一些 ( 因为取得时间段长 把波峰波谷 都给平均削平了)
+
+时间窗口越短，在某一瞬间的突起或者降低就会在成图的时候体现的更加细致、敏感。
+
+而**时间窗口越大，当发生瞬间突起的时候，会显得图平缓了一些**(因为取得时间段长 把波峰波谷都给**平均**削平了)。
+
+**时间窗口取20秒，绘制的曲线比较真实。**
+
+```
+rate(counter_metric3_total[20s])
+```
+
+![image-20230914090613655](.\image\image-20230914090613655.png)
+
+**时间窗口取1分钟，在增速变化临界处的曲线已经开始变得平缓。**
+
+```
+rate(counter_metric3_total[1m])
+```
+
+![image-20230914090400704](.\image\image-20230914090400704.png)
+
+**时间窗口取5分钟，梯度信息几乎已全部丢失，前25分钟变成了一条平滑的曲线。**
+
+```
+rate(counter_metric3_total[5m])
+```
+
+![image-20230914091100270](.\image\image-20230914091100270.png)
+
+rate函数画的曲线只能反应一下大概的增长速率，对于那种突增的情况，是无法精确体现在曲线中的。
+
+下面的文章是对rate函数执行过程的介绍：
+```http
+https://mopitz.medium.com/understanding-prometheus-rate-function-15e93e44ae61
+```
+
+下面以`rate(counter_metric3_total[1m])`为例，介绍rate函数的执行过程：
+
+1. [1m]表示将1分钟作为一个时间窗口对采集到的数据进行分组。假设Prometheus配置的scrape周期是15秒，那一分钟的时间窗口内将会有3或4个采集点。
+2. 计算每个组内数据增长的平均值。(0, 1] 内的速率平均值做为第一秒的值，(1, 2]内的速度平均值作为第二秒的值，这样就得到一系列的点。
+3. 将上述得到的点用线连接起来，就得到了增长曲线图。这就解释了为什么在增速变化的交界处，曲线是斜着上去的。
