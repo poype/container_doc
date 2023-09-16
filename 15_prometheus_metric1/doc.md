@@ -280,3 +280,101 @@ https://mopitz.medium.com/understanding-prometheus-rate-function-15e93e44ae61
 1. [1m]表示将1分钟作为一个时间窗口对采集到的数据进行分组。假设Prometheus配置的scrape周期是15秒，那一分钟的时间窗口内将会有3或4个采集点。
 2. 计算每个组内数据增长的平均值。(0, 1] 内的速率平均值做为第一秒的值，(1, 2]内的速度平均值作为第二秒的值，这样就得到一系列的点。
 3. 将上述得到的点用线连接起来，就得到了增长曲线图。这就解释了为什么在增速变化的交界处，曲线是斜着上去的。
+
+**The output of rate is a gauge, so the same aggregations apply as for gauges.**
+
+# Summary
+
+The power of a summary is that it allows you to calculate the average size of an event. For example, the average amount of bytes that are being returned in each response. If you had three responses of size 1, 4, and 7, then the average would be their sum divided by their count, which is to say 12 divided by 3.
+
+# Histogram
+
+Histogram metrics allow you to track the **distribution** of the size of events, allowing you to calculate **quantiles** from them.
+
+```java
+public void run() {
+    Histogram histogram = Histogram.build()
+                                   .name("histogram_metric")
+                                   .help("study prometheus histogram metric")
+                                   .buckets(1, 2, 5, 10, 30, 50, 100, 300, 500, 1000)  // 每个bucket都会对应一个label
+                                   .register();
+
+    int count = 0;
+    int sum = 0;
+
+    while(true) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(3000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        int number = TestUtil.randomNumber() % 1000;
+        count++;
+        sum = sum + number;
+
+        histogram.observe(number);
+    }
+}
+```
+
+上述代码将会创建下列time series，全都是counter类型：
+
+```java
+histogram_metric_bucket{le="1.0",} 0.0
+histogram_metric_bucket{le="2.0",} 0.0
+histogram_metric_bucket{le="5.0",} 0.0
+histogram_metric_bucket{le="10.0",} 0.0
+histogram_metric_bucket{le="30.0",} 0.0
+histogram_metric_bucket{le="50.0",} 1.0
+histogram_metric_bucket{le="100.0",} 3.0
+histogram_metric_bucket{le="300.0",} 5.0
+histogram_metric_bucket{le="500.0",} 10.0
+histogram_metric_bucket{le="1000.0",} 18.0
+histogram_metric_bucket{le="+Inf",} 18.0
+histogram_metric_count 18.0
+histogram_metric_sum 8770.0
+```
+
+histogram_metric_bucket中的标签le表示小于等于的意思。`le：less than or equal to`。
+
+比如给定一个值501，由于501 大于 500，  所以histogram_metric_bucket{le="500.0",}不会被加1。
+
+计算P90，即表示90%的value都小于等于某个值。例如，90%的request latency都不高于某个值：
+
+```java
+histogram_quantile(0.90, rate(histogram_metric_bucket[1m]))
+```
+
+![image-20230916112441734](.\image\image-20230916112441734.png)
+
+下面是P10：
+
+![image-20230916112550418](.\image\image-20230916112550418.png)
+
+Using histogram_quantile should be the **last** step in a query expression. 
+
+Quantiles cannot be aggregated, or have arithmetic performed upon them. Accordingly, when you want to take a histogram of an aggregate, first aggregate up with sum and then use histogram_quantile:
+
+```java
+histogram_quantile(
+	0.90,
+	sum without(instance)(rate(prometheus_tsdb_compaction_duration_bucket[1d])))
+```
+
+先执行聚合，再计算分位数。
+
+Histogram metrics also include _sum and _count metrics, which **work exactly the same as for the summary metric**.
+
+
+
+
+
+
+
+
+
+
+
+
+
