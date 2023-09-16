@@ -366,7 +366,14 @@ histogram_quantile(
 
 Histogram metrics also include _sum and _count metrics, which **work exactly the same as for the summary metric**.
 
+# Matchers
 
+There are four matchers：
+
+1. **=**， = is the equality matcher; for example, job="node".
+2. **!=**，!= is the negative equality matcher; for example, job!="node".
+3. **=~**，=~ is the regular expression matcher; for example, job=~"n.*".
+4. **!~**，!~ is the negative regular expression matcher.
 
 
 
